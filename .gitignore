@@ -1,0 +1,5 @@
+# lazy.nvim 플러그인 (자동 설치됨)
+lazy-lock.json
+
+# Neovim 런타임 파일
+spell/
