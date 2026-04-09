@@ -12,6 +12,13 @@ ok()    { printf "\033[1;32m[OK]\033[0m    %s\n" "$1"; }
 warn()  { printf "\033[1;33m[WARN]\033[0m  %s\n" "$1"; }
 error() { printf "\033[1;31m[ERROR]\033[0m %s\n" "$1"; exit 1; }
 
+# root면 sudo 불필요, 아니면 sudo 사용
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+else
+    SUDO="sudo"
+fi
+
 # ─── 1. OS 감지 ───
 detect_os() {
     case "$(uname -s)" in
@@ -41,23 +48,23 @@ install_neovim() {
         linux)
             if command -v apt-get &>/dev/null; then
                 # Ubuntu/Debian - PPA에서 최신 버전 설치
-                sudo apt-get update
-                sudo apt-get install -y software-properties-common
-                sudo add-apt-repository -y ppa:neovim-ppa/unstable
-                sudo apt-get update
-                sudo apt-get install -y neovim
+                ${SUDO} apt-get update
+                ${SUDO} apt-get install -y software-properties-common
+                ${SUDO} add-apt-repository -y ppa:neovim-ppa/unstable
+                ${SUDO} apt-get update
+                ${SUDO} apt-get install -y neovim
             elif command -v dnf &>/dev/null; then
-                sudo dnf install -y neovim
+                ${SUDO} dnf install -y neovim
             elif command -v pacman &>/dev/null; then
-                sudo pacman -S --noconfirm neovim
+                ${SUDO} pacman -S --noconfirm neovim
             elif command -v apk &>/dev/null; then
-                sudo apk add neovim
+                ${SUDO} apk add neovim
             else
                 # 범용 fallback: AppImage
                 info "패키지 매니저를 찾을 수 없어 AppImage로 설치합니다..."
                 curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
                 chmod u+x nvim.appimage
-                sudo mv nvim.appimage /usr/local/bin/nvim
+                ${SUDO} mv nvim.appimage /usr/local/bin/nvim
             fi
             ;;
     esac
@@ -92,11 +99,11 @@ install_dependencies() {
                             *)       apt_deps+=("${dep}") ;;
                         esac
                     done
-                    sudo apt-get install -y "${apt_deps[@]}"
+                    ${SUDO} apt-get install -y "${apt_deps[@]}"
                 elif command -v dnf &>/dev/null; then
-                    sudo dnf install -y "${deps[@]}"
+                    ${SUDO} dnf install -y "${deps[@]}"
                 elif command -v pacman &>/dev/null; then
-                    sudo pacman -S --noconfirm "${deps[@]}"
+                    ${SUDO} pacman -S --noconfirm "${deps[@]}"
                 fi
                 ;;
         esac
