@@ -20,6 +20,7 @@ return {
                 "jdtls",        -- Java
                 "lua_ls",       -- Lua (Neovim 설정용)
             },
+            automatic_enable = false, -- 수동으로 vim.lsp.enable 호출
         },
     },
 

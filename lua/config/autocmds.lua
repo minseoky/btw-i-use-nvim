@@ -43,6 +43,7 @@ autocmd("FileType", {
 -- yank 시 하이라이트
 autocmd("TextYankPost", {
     callback = function()
-        vim.hl.on_yank({ timeout = 200 })
+        local hl = vim.hl or vim.highlight
+        hl.on_yank({ timeout = 200 })
     end,
 })
