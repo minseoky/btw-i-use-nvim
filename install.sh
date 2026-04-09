@@ -82,6 +82,7 @@ install_dependencies() {
     command -v git   &>/dev/null || deps+=("git")
     command -v node  &>/dev/null || deps+=("node")
     command -v unzip &>/dev/null || deps+=("unzip")
+    command -v zip   &>/dev/null || deps+=("zip")
     command -v curl  &>/dev/null || deps+=("curl")
 
     if [ ${#deps[@]} -eq 0 ]; then
