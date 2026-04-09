@@ -77,10 +77,12 @@ install_neovim() {
 install_dependencies() {
     local deps=()
 
-    command -v rg  &>/dev/null || deps+=("ripgrep")
-    command -v fd  &>/dev/null || deps+=("fd")
-    command -v git &>/dev/null || deps+=("git")
-    command -v node &>/dev/null || deps+=("node")
+    command -v rg    &>/dev/null || deps+=("ripgrep")
+    command -v fd    &>/dev/null || deps+=("fd")
+    command -v git   &>/dev/null || deps+=("git")
+    command -v node  &>/dev/null || deps+=("node")
+    command -v unzip &>/dev/null || deps+=("unzip")
+    command -v curl  &>/dev/null || deps+=("curl")
 
     if [ ${#deps[@]} -eq 0 ]; then
         ok "모든 필수 도구가 이미 설치되어 있습니다."
