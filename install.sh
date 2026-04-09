@@ -30,13 +30,29 @@ detect_os() {
 }
 
 # ─── 2. Neovim 설치 ───
+NVIM_MIN_MINOR=11  # vim.lsp.config / vim.lsp.enable 필요
+
+nvim_version_ok() {
+    command -v nvim &>/dev/null || return 1
+    local minor
+    minor=$(nvim --version | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1 | cut -d. -f2)
+    [ "${minor:-0}" -ge "${NVIM_MIN_MINOR}" ]
+}
+
+install_nvim_appimage() {
+    info "Neovim AppImage (최신) 설치 중..."
+    curl -fLo /tmp/nvim.appimage "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage"
+    chmod u+x /tmp/nvim.appimage
+    ${SUDO} mv /tmp/nvim.appimage /usr/local/bin/nvim
+}
+
 install_neovim() {
-    if command -v nvim &>/dev/null; then
+    if nvim_version_ok; then
         ok "Neovim 이미 설치됨: $(nvim --version | head -1)"
         return
     fi
 
-    info "Neovim 설치 중..."
+    info "Neovim 0.${NVIM_MIN_MINOR}+ 설치 중..."
     case "${OS}" in
         macos)
             if command -v brew &>/dev/null; then
@@ -46,10 +62,10 @@ install_neovim() {
             fi
             ;;
         linux)
+            # 먼저 패키지 매니저로 시도
             if command -v apt-get &>/dev/null; then
                 ${SUDO} apt-get update
                 if grep -qi ubuntu /etc/os-release 2>/dev/null; then
-                    # Ubuntu - PPA에서 최신 버전 설치
                     ${SUDO} apt-get install -y software-properties-common
                     ${SUDO} add-apt-repository -y ppa:neovim-ppa/unstable
                     ${SUDO} apt-get update
@@ -61,12 +77,12 @@ install_neovim() {
                 ${SUDO} pacman -S --noconfirm neovim
             elif command -v apk &>/dev/null; then
                 ${SUDO} apk add neovim
-            else
-                # 범용 fallback: AppImage
-                info "패키지 매니저를 찾을 수 없어 AppImage로 설치합니다..."
-                curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
-                chmod u+x nvim.appimage
-                ${SUDO} mv nvim.appimage /usr/local/bin/nvim
+            fi
+
+            # 버전이 부족하면 AppImage로 덮어쓰기
+            if ! nvim_version_ok; then
+                warn "패키지 매니저의 Neovim이 0.${NVIM_MIN_MINOR} 미만입니다. AppImage로 재설치합니다."
+                install_nvim_appimage
             fi
             ;;
     esac
@@ -84,6 +100,8 @@ install_dependencies() {
     command -v unzip &>/dev/null || deps+=("unzip")
     command -v zip   &>/dev/null || deps+=("zip")
     command -v curl  &>/dev/null || deps+=("curl")
+    command -v make  &>/dev/null || deps+=("make")
+    command -v cc    &>/dev/null || deps+=("gcc")
 
     if [ ${#deps[@]} -eq 0 ]; then
         ok "모든 필수 도구가 이미 설치되어 있습니다."
