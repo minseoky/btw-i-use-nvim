@@ -47,11 +47,13 @@ install_neovim() {
             ;;
         linux)
             if command -v apt-get &>/dev/null; then
-                # Ubuntu/Debian - PPA에서 최신 버전 설치
                 ${SUDO} apt-get update
-                ${SUDO} apt-get install -y software-properties-common
-                ${SUDO} add-apt-repository -y ppa:neovim-ppa/unstable
-                ${SUDO} apt-get update
+                if grep -qi ubuntu /etc/os-release 2>/dev/null; then
+                    # Ubuntu - PPA에서 최신 버전 설치
+                    ${SUDO} apt-get install -y software-properties-common
+                    ${SUDO} add-apt-repository -y ppa:neovim-ppa/unstable
+                    ${SUDO} apt-get update
+                fi
                 ${SUDO} apt-get install -y neovim
             elif command -v dnf &>/dev/null; then
                 ${SUDO} dnf install -y neovim
