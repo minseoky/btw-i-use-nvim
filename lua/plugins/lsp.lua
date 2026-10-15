@@ -13,15 +13,21 @@ return {
         dependencies = {
             "mason-org/mason.nvim",
         },
-        opts = {
-            ensure_installed = {
-                "gopls",        -- Go
+        opts = function()
+            local servers = {
                 "pyright",      -- Python
                 "jdtls",        -- Java
                 "lua_ls",       -- Lua (Neovim 설정용)
-            },
-            automatic_enable = false, -- 수동으로 vim.lsp.enable 호출
-        },
+            }
+            -- gopls는 Mason이 `go install`로 빌드하므로 Go가 없으면 설치 실패
+            if vim.fn.executable("go") == 1 then
+                table.insert(servers, 1, "gopls") -- Go
+            end
+            return {
+                ensure_installed = servers,
+                automatic_enable = false, -- 수동으로 vim.lsp.enable 호출
+            }
+        end,
     },
 
     -- 자동완성 capabilities 제공용
