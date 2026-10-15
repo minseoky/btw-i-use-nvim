@@ -108,6 +108,16 @@ return {
 
             -- Python (pyright)
             vim.lsp.config("pyright", {
+                -- 프로젝트 루트의 .venv(uv 등)를 자동으로 사용 → activate 불필요
+                before_init = function(_, config)
+                    local root = config.root_dir or vim.fn.getcwd()
+                    local venv_python = root .. "/.venv/bin/python"
+                    if vim.fn.executable(venv_python) == 1 then
+                        config.settings.python.pythonPath = venv_python
+                    elseif vim.env.VIRTUAL_ENV then
+                        config.settings.python.pythonPath = vim.env.VIRTUAL_ENV .. "/bin/python"
+                    end
+                end,
                 settings = {
                     python = {
                         analysis = {
