@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# `sh install.sh`처럼 dash 등으로 실행되면 bash로 다시 실행 (pipefail, 배열 등 bash 문법 사용)
+if [ -z "${BASH_VERSION:-}" ]; then
+    exec bash "$0" "$@"
+fi
 set -euo pipefail
 
 # ─── Neovim 환경 포터블 설치 스크립트 ───
@@ -40,8 +44,14 @@ nvim_version_ok() {
 }
 
 install_nvim_appimage() {
-    info "Neovim AppImage (최신) 설치 중..."
-    curl -fLo /tmp/nvim.appimage "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage"
+    local arch
+    case "$(uname -m)" in
+        x86_64)        arch="x86_64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        *)             error "AppImage를 지원하지 않는 아키텍처: $(uname -m)" ;;
+    esac
+    info "Neovim AppImage (최신, ${arch}) 설치 중..."
+    curl -fLo /tmp/nvim.appimage "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${arch}.appimage"
     chmod u+x /tmp/nvim.appimage
     ${SUDO} mv /tmp/nvim.appimage /usr/local/bin/nvim
 }
@@ -94,7 +104,8 @@ install_dependencies() {
     local deps=()
 
     command -v rg    &>/dev/null || deps+=("ripgrep")
-    command -v fd    &>/dev/null || deps+=("fd")
+    # Debian/Ubuntu의 fd-find 패키지는 실행 파일 이름이 fdfind
+    command -v fd    &>/dev/null || command -v fdfind &>/dev/null || deps+=("fd")
     command -v git   &>/dev/null || deps+=("git")
     command -v node  &>/dev/null || deps+=("node")
     command -v unzip &>/dev/null || deps+=("unzip")
@@ -133,6 +144,13 @@ install_dependencies() {
         ok "필수 도구 설치 완료"
     fi
 
+    # fdfind만 있으면 fd 이름으로 링크 (~/.local/bin은 PATH에 있어야 함)
+    if ! command -v fd &>/dev/null && command -v fdfind &>/dev/null; then
+        mkdir -p "${HOME}/.local/bin"
+        ln -sf "$(command -v fdfind)" "${HOME}/.local/bin/fd"
+        ok "fd 링크 생성: ${HOME}/.local/bin/fd -> $(command -v fdfind)"
+    fi
+
     # Bash 4+ (SDKMAN 요구사항, macOS 기본 bash는 3.x)
     if [ "${OS}" = "macos" ]; then
         local bash_major
@@ -164,8 +182,9 @@ install_java() {
     [ "${OS}" = "macos" ] && sdk_bash="/opt/homebrew/bin/bash"
 
     # Java 21 설치 (jdtls 실행용, 없으면 설치)
+    # SDKMAN 첫 설치 직후에는 candidates/java가 없어 find가 실패하므로 `|| true` 필요 (pipefail)
     local has_java21
-    has_java21=$(find "${HOME}/.sdkman/candidates/java" -maxdepth 1 -name "21*" -type d 2>/dev/null | head -1)
+    has_java21=$(find "${HOME}/.sdkman/candidates/java" -maxdepth 1 -name "21*" -type d 2>/dev/null | head -1 || true)
     if [ -z "${has_java21}" ]; then
         info "Java 21 설치 중 (Temurin)..."
         ${sdk_bash} -c 'source "$HOME/.sdkman/bin/sdkman-init.sh" && sdk install java 21.0.10-tem <<< "Y"' 2>/dev/null || true
@@ -176,7 +195,7 @@ install_java() {
 
     # Java 8 설치 (선택, 없으면 설치)
     local has_java8
-    has_java8=$(find "${HOME}/.sdkman/candidates/java" -maxdepth 1 -name "8*" -type d 2>/dev/null | head -1)
+    has_java8=$(find "${HOME}/.sdkman/candidates/java" -maxdepth 1 -name "8*" -type d 2>/dev/null | head -1 || true)
     if [ -z "${has_java8}" ]; then
         info "Java 8 설치 중 (Zulu)..."
         ${sdk_bash} -c 'source "$HOME/.sdkman/bin/sdkman-init.sh" && sdk install java 8.0.482-zulu <<< "n"' 2>/dev/null || true
@@ -241,7 +260,14 @@ install_plugins() {
 # ─── 6. LSP 서버 설치 ───
 install_lsp_servers() {
     info "LSP 서버 설치 중 (Mason)..."
-    nvim --headless "+MasonInstall gopls pyright jdtls lua-language-server" "+sleep 30" +qa 2>/dev/null || true
+    # gopls는 Mason이 `go install`로 빌드하므로 Go가 있을 때만 설치
+    local servers="pyright jdtls lua-language-server"
+    if command -v go &>/dev/null; then
+        servers="gopls ${servers}"
+    else
+        warn "Go가 없어 gopls 설치를 건너뜁니다 (Go 설치 후 :MasonInstall gopls)"
+    fi
+    nvim --headless "+MasonInstall ${servers}" "+sleep 30" +qa 2>/dev/null || true
     ok "LSP 서버 설치 완료 (일부는 Neovim 첫 실행 시 자동 완료됩니다)"
 }
 
