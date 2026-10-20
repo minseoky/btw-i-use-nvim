@@ -11,6 +11,13 @@ opt.shiftwidth = 4
 opt.expandtab = true
 opt.smartindent = true
 
+-- Python 괄호 안 들여쓰기를 black/ruff 스타일로 (기본값은 8칸 + 닫는 괄호도 8칸)
+vim.g.python_indent = {
+    open_paren = "shiftwidth()",
+    continue = "shiftwidth()",
+    closed_paren_align_last_line = false,
+}
+
 -- 검색
 opt.ignorecase = true
 opt.smartcase = true
